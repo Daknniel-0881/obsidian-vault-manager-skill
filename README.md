@@ -39,7 +39,7 @@
 | **PARA** | Tiago Forte《Building a Second Brain》 | Projects / Areas / Resources / Archive | 目录结构骨架 |
 | **P.A.I.R** | flomo / 少楠 | 先收再理:Inbox 缓冲 → 定期清理 | `00-Inbox/` 机制 |
 | **LLM Wiki** | Karpathy(2026 公开分享) | 知识是 LLM 编译产物,人审核方向 | `04-Concepts/` 概念枢纽 |
-| **4 层信息分层** | 于一(2026-05 公开分享) | 个人经验/在场素材/外部入口/萃取成品 物理隔离 | 引出本 Skill v3 的 4+1 层模型 |
+| **4 层信息分层** | 余一(2026-05 公开分享) | 个人经验/在场素材/外部入口/萃取成品 物理隔离 | 引出本 Skill v3 的 4+1 层模型 |
 
 ### 4+1 层信息分层模型(v3 核心)
 
@@ -393,11 +393,11 @@ MIT
 - **PARA 方法论**:Tiago Forte《Building a Second Brain》
 - **P.A.I.R 方法论**:少楠 / flomo
 - **LLM Wiki**:Andrej Karpathy(2026 公开分享)
-- **4 层信息分层**:于一(2026-05 公开分享)
+- **4 层信息分层**:余一(2026-05 公开分享)
 - **Claude Code Skill 系统**:Anthropic
 
 ## Changelog
 
-- **v3.0**(2026-05): 引入 4+1 层信息分层模型(于一框架 + 冷藏扩展)、新增 L1 个人经验层及 3 个子目录、新增高频场景路由表(12 场景)、frontmatter 强制 layer 字段、新增独立 PHILOSOPHY.md 思想文档
+- **v3.0**(2026-05): 引入 4+1 层信息分层模型(余一框架 + 冷藏扩展)、新增 L1 个人经验层及 3 个子目录、新增高频场景路由表(12 场景)、frontmatter 强制 layer 字段、新增独立 PHILOSOPHY.md 思想文档
 - **v2.0**(2026-05): 新增 99-冷藏区隔离机制 + 命名前缀规范 + 淘金 SOP + Grep 默认豁免规则
 - **v1.0**(2026-04): 初始版本,基于 PARA + P.A.I.R 融合架构
