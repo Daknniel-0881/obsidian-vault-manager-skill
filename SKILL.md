@@ -1,15 +1,16 @@
 ---
 name: obsidian-vault-manager
-description: Use when the user asks to 收录到知识库 / 存到 Obsidian / 整理笔记 / 知识库检索 / Wiki Link / PARA / 双向链接 / 翻一下推特公众号 / 个人经验. Manages Obsidian vault with 4+1 layer info-stratification + PARA + P.A.I.R + Cold Storage architecture. Unified entry for capturing, retrieving, organizing.
-version: 3.0
+description: Use when the user asks to 收录到知识库 / 存到 Obsidian / 整理笔记 / 知识库检索 / Wiki Link / 双向链接 / 加链接 / 补链接 / PARA / 翻一下推特公众号 / 个人经验. Manages Obsidian vault with 4+1 layer info-stratification + PARA + P.A.I.R + Cold Storage + auto wikilink discovery. Unified entry for capturing, retrieving, organizing.
+version: 3.1
 license: MIT
 ---
 
-# Obsidian Vault Manager — 知识库管理 Skill (v3)
+# Obsidian Vault Manager — 知识库管理 Skill (v3.1)
 
-> Obsidian 知识库的收录、检索、整理、Wiki Link 维护的统一入口。
-> 架构哲学:**4+1 层信息分层 + PARA + P.A.I.R + 冷藏区隔离 + 命名前缀规范 + 高频场景路由**。
-> v3 关键升级:**引入 4+1 层信息分层模型(基于余一框架)、新增个人经验层 L1 目录、新增高频场景路由表、frontmatter 强制 layer 字段**。
+> Obsidian 知识库的收录、检索、整理、Wiki Link 自动维护的统一入口。
+> 架构哲学:**4+1 层信息分层 + PARA + P.A.I.R + 冷藏区隔离 + 命名前缀规范 + 高频场景路由 + Wiki Link 自动识别**。
+> v3.1 关键升级:**新增 Wiki Link 自动识别 SOP(8 维实体扫描 + 7 步流程),新建/更新文件后强制扫描候选 wikilink,自动建立向上/横向/向下三层链接**。
+> v3.0 关键升级:**引入 4+1 层信息分层模型(基于余一框架)、新增个人经验层 L1 目录、新增高频场景路由表、frontmatter 强制 layer 字段**。
 >
 > 思想根基详见同目录 [PHILOSOPHY.md](./PHILOSOPHY.md)。本文写**怎么做**,PHILOSOPHY 写**为什么**。
 
@@ -18,7 +19,8 @@ license: MIT
 - 用户说"收录到知识库"、"存到 Obsidian"、"入库"
 - 用户提问时需要检索知识库
 - 整理/归类/移动知识库文件
-- 补充或维护 Wiki Link
+- 补充或维护 Wiki Link、双向链接、加链接、补链接(v3.1 自动触发)
+- 创建任何新笔记(v3.1 强制扫描 wikilink)
 - 创建新笔记或更新 MOC 索引
 - 从冷藏区淘金提炼
 - 记录"个人经验"(原话/亲历/感受/判断)→ 走 L1 流程
@@ -379,24 +381,130 @@ grep -r "QUERY" <vault-root>/ \
 
 ---
 
-## Wiki Link 维护
+## Wiki Link 自动识别与维护(v3.1 升级 · 强制)
 
-### 质量标准
+### 触发时机(必须自动执行)
 
-- `04-Concepts/` 节点:≥ 5 个 Wiki Link,至少 3 个跨域
-- `02-Areas/` 文件:≥ 2 个 Wiki Link
-- `02-Areas/个人经验/` L1 文件:≥ 1 个(向上指 `_MOC-个人经验`)
-- `06-Library/` 工具清单:≥ 1 个(指向相关 SOP 或概念)
-- `07-Archive/` 高价值原料:建议 ≥ 1 个
-- `99-冷藏/`:不强制要求
+每次以下操作完成后**必须**自动触发 wikilink 扫描:
 
-### 批量补充方法
+- 创建任何新文件(frontmatter 写完后,正文落定后)
+- Edit 已有文件且追加内容 ≥ 50 字
+- 用户明确说"加 wikilink"、"补双向链接"、"加链接"
+- 回写 AI 助手分析到知识库时
+
+### 自动识别 SOP(8 维实体扫描)
+
+新建/更新文件后,必须按以下 8 维度主动扫描候选 wikilink:
+
+| 维度 | 实体类型 | 候选目录 | 链接形态 |
+|------|---------|---------|---------|
+| 1 | 跨域概念 | `04-Concepts/[*]` | `[[[前缀] 概念名]]` |
+| 2 | 人物档案 | `03-People/<同行/客户/导师/合作/团队>/` | `[[人物档案]]` |
+| 3 | 项目交付物 | `01-Projects/`、`07-Archive/已结案项目/` | `[[项目名]]` |
+| 4 | 长期领域 | `02-Areas/<领域>/` | `[[_MOC-领域]]` |
+| 5 | 方法论 SOP | `05-Playbooks/` | `[[SOP 名]]` |
+| 6 | 工具/Skill | `06-Library/工具清单/` | `[[工具名]]` |
+| 7 | 课程/书籍/论文 | `06-Library/<课程/书籍/论文>/` | `[[资源名]]` |
+| 8 | L1 个人经验 | `02-Areas/个人经验/` | `[[原话/感受/亲历]]` |
+
+### 7 步自动扫描流程
+
+```
+Step 1: NER 候选词提取
+  - 从正文识别专有名词、概念名、工具名、人物名
+  - 从 frontmatter tags 提取主题词
+  - 从段落标题、列表项首词提取
+
+Step 2: vault 内 Glob/Grep 候选词
+  ls <vault-root>/04-Concepts/ | grep -iE "<候选词>"
+  ls <vault-root>/03-People/*/ | grep -iE "<候选词>"
+  ls -R <vault-root>/05-Playbooks/ | grep -iE "<候选词>"
+  ls -R <vault-root>/02-Areas/ | grep -iE "<候选词>"
+
+Step 3: 命中分级
+  - 强匹配(全词匹配文件名)→ 必加 wikilink
+  - 中匹配(文件名包含候选词)→ 推荐加 wikilink
+  - 弱匹配(仅 tags 重合 ≥ 2)→ 助手判断
+  - 不匹配 → 不创建死链
+
+Step 4: 在「## 相关链接」追加 [[]]
+  - 没有「## 相关链接」区块 → 末尾创建
+  - 已有 → 按维度分组追加,去重
+
+Step 5: 反向链接补充(推荐)
+  - 在被链接文件追加反向引用(若该文件存在「## 相关链接」区块)
+  - 不写入冷藏区文件
+
+Step 6: MOC 同步
+  - 文件落到的目录有 _MOC-*.md → 在 MOC 加索引行
+  - 新建的概念节点 → 同步注册到「!_MOC/知识库总入口.md」
+
+Step 7: 链接质量门槛验证
+  - L4 萃取层 ≥ 2 个 wikilink
+  - 04-Concepts 节点 ≥ 5 个,至少 3 跨域
+  - L1 个人经验层 ≥ 1 个(向上指 _MOC-个人经验)
+  - 06-Library 工具清单 ≥ 1 个
+  不达标 → 二次扫描或报告给用户决定
+```
+
+### 链接形态规范
+
+| 强度 | 形式 | 用途 |
+|------|------|------|
+| 强链接 | `[[文件名]]` | 内容核心相关,直接引用 |
+| 别名链接 | `[[文件名\|别名]]` | 文件名长/不通顺时用别名 |
+| 反向链接 | 双向写入 | 跨域知识网枢纽 |
+
+### 链接质量标准
+
+| 文件类型 | wikilink 数量要求 |
+|---------|------------------|
+| `04-Concepts/` 节点 | **≥ 5,至少 3 个跨域**(跨 02-Areas/03-People/05-Playbooks 等) |
+| `02-Areas/` 文件(L4) | ≥ 2 |
+| `02-Areas/个人经验/` L1 文件 | ≥ 1(向上指 `_MOC-个人经验`) |
+| `06-Library/` 工具清单 | ≥ 1(指向相关 SOP 或概念) |
+| `07-Archive/` 高价值原料 | 建议 ≥ 1 |
+| `99-冷藏/` | 不强制 |
+
+### 链接示例(标准模板)
+
+```markdown
+## 相关链接
+
+**跨域概念(L4)**:
+- [[[方法论] 信息分层模型]]
+- [[[理论] 知识库与RAG完全指南]]
+
+**领域索引(向上)**:
+- [[_MOC-<your-domain>]]
+- [[!_MOC/知识库总入口]]
+
+**人物档案(横向)**:
+- [[客户档案-XX]]
+- [[同行案例-XX]]
+
+**SOP/方法论**:
+- [[<sales-sop>-客户对话]]
+
+**项目记录(向下)**:
+- [[YYYY-MM-DD-具体记录]]
+```
+
+### Wikilink 禁止事项
+
+1. **不创建死链**:写 `[[XX]]` 前必须 Glob/Grep 确认目标存在
+2. **不重复链接**:同一文件同一目标只链一次
+3. **不污染冷藏**:`99-冷藏/` 内不强制 wikilink,反向引用也不写入冷藏
+4. **不创建无意义弱链接**:tags 重合 < 2 个 → 不强加链接
+5. **不在 frontmatter 内写 wikilink**:仅在正文「## 相关链接」或正文段落
+
+### 批量补充方法(已存量文件)
 
 1. 读取目标文件
-2. 识别概念、人物、工具、项目
-3. 检查 04-Concepts 是否已有节点
+2. 识别概念、人物、工具、项目(走 8 维扫描)
+3. 检查目标实体是否已有节点
 4. 在「相关链接」区块追加 `[[]]`
-5. 概念不存在且重要 → 创建新概念节点(带前缀)
+5. 实体不存在且重要 → 创建新概念节点(带前缀)
 
 ---
 
@@ -504,6 +612,7 @@ MIT
 
 ## Changelog
 
+- **v3.1**(2026-05): 新增 Wiki Link 自动识别 SOP(8 维实体扫描 + 7 步流程)、强制新建/更新文件后扫描 wikilink、新增链接形态规范、新增链接示例标准模板、新增 wikilink 禁止事项 5 条
 - **v3.0**(2026-05): 引入 4+1 层信息分层模型(余一框架 + 冷藏扩展)、新增 L1 个人经验层及三个子目录、新增高频场景路由表(12 场景)、frontmatter 强制 layer 字段、新增独立 PHILOSOPHY.md 思想文档
 - **v2.0**(2026-05): 新增 99-冷藏区隔离机制 + 命名前缀规范 + 淘金 SOP + Grep 默认豁免规则
 - **v1.0**(2026-04): 初始版本,基于 PARA + P.A.I.R 融合架构
