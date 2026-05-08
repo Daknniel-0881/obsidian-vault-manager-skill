@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.bak.*
+SKILL.md.bak.*
+
+# Local-only(防止意外提交本地版)
+SKILL-local.md
+SKILL-private.md
+
+# Logs
+*.log
