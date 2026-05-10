@@ -496,3 +496,11 @@ MIT
 > **物理隔离 + 命名规范 + 信噪比治理 + Wiki Link 自动识别 = 让 AI 时代的知识库不腐烂。**
 >
 > 详细思想见 [PHILOSOPHY.md](./PHILOSOPHY.md)。
+
+## 关于本仓库与曲率企业 AI 服务
+
+本仓库开源分享 **qulv-obsidian-vault-manager-skill**：AI 时代的 Obsidian 知识库管理 Skill，帮助个人和团队维护高信噪比、可检索、可协作的知识库。曲率提供企业 AI 培训、企业 AI 转型咨询、落地工具搭建、AI 工具定制及 Skill 定制、企业 AI 转型全程陪跑，帮助团队把 AI 从演示样例落到真实业务流程中。
+
+感兴趣可扫码添加微信：
+
+![曲率企业 AI 服务海报](assets/qulv/qulv-ai-business-poster-readme.png)
