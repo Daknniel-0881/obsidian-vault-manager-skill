@@ -18,3 +18,7 @@ SKILL-private.md
 
 # Logs
 *.log
+
+# Project-local AI tooling state (contains absolute paths)
+.omc/
+.claude/

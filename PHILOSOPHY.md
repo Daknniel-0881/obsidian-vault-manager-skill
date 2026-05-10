@@ -6,7 +6,7 @@
 
 ---
 
-## 一、四个思想来源
+## 一、五个思想来源
 
 | 来源 | 提出者 | 核心思想 | 我们怎么用 |
 |------|-------|---------|-----------|
@@ -14,12 +14,14 @@
 | **P.A.I.R** | flomo / 少楠 | 先收再理:Project / Area / Inbox / Resource | `00-Inbox` 缓冲层 + 定期清理机制 |
 | **LLM Wiki** | Karpathy(2026 公开分享) | 知识是编译产物,不是检索索引;LLM 维护、人审核 | `04-Concepts` 概念枢纽 + 助手分析与原文物理隔离 |
 | **4 层信息分层** | 余一(2026-05 公开分享) | 个人经验 / 在场素材 / 外部入口 / 萃取成品 物理隔离 | 引出本 Skill v3 的 4+1 层模型(详见第二节) |
+| **olw 概念提炼管道** | kytmanov [obsidian-llm-wiki-local](https://github.com/kytmanov/obsidian-llm-wiki-local) | 把 Karpathy LLM Wiki 抽象工程化:Ingest/Compile/Review/Approve/Reject 流水线 + Aliases + Stubs + Hand-edit Protection | v3.2 引入 5 步提炼 SOP + 别名机制 + 桩节点 + 驳回反馈 + 人工编辑保护(详见第七节) |
 
-这四个思路不是堆叠,而是层层嵌套:
+这五个思路不是堆叠,而是层层嵌套:
 - PARA 解决**目录结构**
 - P.A.I.R 解决**收录顺畅度**
-- LLM Wiki 解决**AI 时代的复利**
-- 4 层分层解决**信息源头的污染问题**
+- LLM Wiki 解决**AI 时代的复利**(给方向)
+- 4 层分层解决**信息源头的污染问题**(给分层)
+- olw 概念提炼管道解决**"原文 → 概念"的工程化落地**(给流水线)
 
 ---
 
@@ -147,6 +149,39 @@ Karpathy 提出的是**通用抽象框架**,本 Skill 是**已经跑了一段时
 - 知识是 LLM 编译产物的思路
 - 操作日志的重要性
 - 查询结果回写习惯(好回答存回 wiki)
+
+---
+
+## 五·补、与 kytmanov olw(obsidian-llm-wiki-local)方案的对照(v3.2)
+
+Karpathy 给的是**抽象框架**,kytmanov 给的是**第一个真实跑起来的 CLI 工具**(Python + Click,带 doctor / ingest / compile / review / approve / reject / unblock 子命令)。本 Skill v3.2 借鉴了它的工程化思想,但**继续保留无脚本的纯文档可执行规范形态**(让任何 AI 助手能直接读 SKILL.md 跑流程,不依赖额外 CLI)。
+
+| olw 概念 | 本 Skill v3.2 对应物 |
+|----------|---------------------|
+| `raw/` vs `wiki/` 物理双区 | L2/L5(原料)vs L4(萃取),用前缀 + 目录区分 |
+| `olw ingest` | 收录流程 + frontmatter 写齐 + 内容指纹 dedup |
+| `olw compile` | 概念提炼管道 5 步 SOP(Ingest→Validate→Match→Draft→Review) |
+| `olw review/approve/reject` | Step 5 人审 + rejected_drafts 字段 |
+| `olw unblock` | 用户手动从 `_system/_blocked.md` 移除条目 |
+| 5 次驳回自动 block | Rejection Feedback 反馈闭环 |
+| frontmatter `aliases:` | Aliases 别名机制 + `_system/_aliases.md` 全局表 |
+| 自动建 stub 概念 | Stubs 桩节点机制(`04-Concepts/_stubs/`) |
+| Hand-edit detection 跳过覆写 | Hand-edit Protection 第 7 大原则 + AI 区块标记 |
+| frontmatter `confidence:` / `status:` | v3.2 强制字段 |
+
+**比 olw 多的**:
+- 4+1 层信息分层(olw 只有 raw/wiki 二分,没有信息源头治理)
+- L1 个人经验层(olw 不区分"原话"和"成品",会被 SOP 萃取流程吞没)
+- 99-冷藏区(olw 没考虑高频抓取流)
+- 高频场景路由表(12 场景的快速定位)
+- 中文优先 + 命名前缀规范([MOC]/[理论]/[工程]/[方法论])
+
+**从 olw 学的**:
+- 概念提炼必须**工程化**(不能靠 AI 拍脑袋判断该不该建节点)
+- 别名机制是**减少死链的核心**(不只是 wikilink 自动识别要查别名表)
+- 桩节点是**承认"我现在没空写完"的工程优雅**(占位 + 提升规则)
+- 驳回反馈闭环防止**AI 反复浪费 token 在已被人否定的提炼上**
+- Hand-edit Protection 是**人机协作长期可持续的前提**(没有它,AI 会反复覆盖人改的内容,用户最终会放弃 AI 维护)
 
 ---
 

@@ -1,14 +1,15 @@
 ---
 name: obsidian-vault-manager
-description: Use when the user asks to 收录到知识库 / 存到 Obsidian / 整理笔记 / 知识库检索 / Wiki Link / 双向链接 / 加链接 / 补链接 / PARA / 翻一下推特公众号 / 个人经验. Manages Obsidian vault with 4+1 layer info-stratification + PARA + P.A.I.R + Cold Storage + auto wikilink discovery. Unified entry for capturing, retrieving, organizing.
-version: 3.1
+description: Use when the user asks to 收录到知识库 / 存到 Obsidian / 整理笔记 / 知识库检索 / Wiki Link / 双向链接 / 加链接 / 补链接 / PARA / 翻一下推特公众号 / 个人经验 / 概念提炼 / 草稿评审. Manages Obsidian vault with 4+1 layer info-stratification + PARA + P.A.I.R + Cold Storage + auto wikilink discovery + concept extraction pipeline + alias/stub repair. Unified entry for capturing, retrieving, organizing, refining.
+version: 3.2
 license: MIT
 ---
 
-# Obsidian Vault Manager — 知识库管理 Skill (v3.1)
+# Obsidian Vault Manager — 知识库管理 Skill (v3.2)
 
-> Obsidian 知识库的收录、检索、整理、Wiki Link 自动维护的统一入口。
-> 架构哲学:**4+1 层信息分层 + PARA + P.A.I.R + 冷藏区隔离 + 命名前缀规范 + 高频场景路由 + Wiki Link 自动识别**。
+> Obsidian 知识库的收录、检索、整理、Wiki Link 自动维护、概念提炼的统一入口。
+> 架构哲学:**4+1 层信息分层 + PARA + P.A.I.R + 冷藏区隔离 + 命名前缀规范 + 高频场景路由 + Wiki Link 自动识别 + 概念提炼管道 + 别名/桩链修复 + 人工编辑保护**。
+> v3.2 关键升级:**融合 kytmanov olw(obsidian-llm-wiki-local)的概念提炼管道思想——新增 5 步概念萃取 SOP(Ingest→Validate→Match→Draft→Review)、Aliases 别名机制、Stubs 桩节点机制、Rejection 反馈闭环、Hand-edit Protection 人工编辑保护原则、frontmatter 新增 status/confidence/aliases/rejected_drafts 字段**。
 > v3.1 关键升级:**新增 Wiki Link 自动识别 SOP(8 维实体扫描 + 7 步流程),新建/更新文件后强制扫描候选 wikilink,自动建立向上/横向/向下三层链接**。
 > v3.0 关键升级:**引入 4+1 层信息分层模型(基于余一框架)、新增个人经验层 L1 目录、新增高频场景路由表、frontmatter 强制 layer 字段**。
 >
@@ -201,7 +202,7 @@ license: MIT
 - 全中文,不带前缀(前缀仅用于 04-Concepts)
 - 日期类用 `YYYY-MM-DD-主题.md`
 
-### Frontmatter 强制字段(v3 升级)
+### Frontmatter 强制字段(v3.2 升级)
 
 ```yaml
 ---
@@ -210,7 +211,11 @@ created: YYYY-MM-DD
 source: <URL 或来源说明>
 author: <作者>
 layer: extract  # v3 必填:experience / scene / inbox / extract / cold,详见信息分层模型
-cherry_picked: false  # 仅冷藏区淘金后才设 true
+status: draft   # v3.2 新增:stub / draft / published(仅 L4 萃取层使用)
+confidence: 0.6 # v3.2 新增:0.0-1.0 概念置信度(仅 L4 萃取层使用)
+aliases: []     # v3.2 新增:别名列表,用于 wikilink 别名匹配(详见 Aliases 机制)
+rejected_drafts: []  # v3.2 新增:被人工驳回的 AI 草稿哈希(详见 Rejection Feedback)
+cherry_picked: false # 仅冷藏区淘金后才设 true
 ---
 ```
 
@@ -221,6 +226,23 @@ cherry_picked: false  # 仅冷藏区淘金后才设 true
 - `inbox`:收件箱待分类(L3,放 `00-Inbox/`)
 - `extract`:萃取成品(L4,放 `02-Areas/04-Concepts/05-Playbooks/06-Library`)
 - `cold`:冷藏原料(L5,放 `99-冷藏/`)
+
+**status 字段速查(v3.2 · 仅 L4)**:
+
+- `stub`:占位桩节点,只有标题没有内容(详见 Stubs 机制)
+- `draft`:AI 助手生成或人工初稿,待人审核
+- `published`:人审核通过,稳定可引用
+
+**confidence 字段速查(v3.2 · 仅 L4)**:
+
+- `0.0-0.3`:低置信度,候选概念,可能误识别
+- `0.4-0.7`:中置信度,需要人工核对
+- `0.8-1.0`:高置信度,稳定概念
+
+**aliases 字段速查(v3.2)**:
+
+- 列出该概念的所有别名(中英文/缩写/全称),wikilink 自动识别时优先匹配
+- 示例:`aliases: [PC, Program Counter, 程序计数器]` → `[[PC]]` 自动跳转到该节点
 
 L1 个人经验层额外字段:
 
@@ -508,6 +530,228 @@ Step 7: 链接质量门槛验证
 
 ---
 
+## 概念提炼管道(v3.2 新增 · 5 步 SOP)
+
+> 灵感来自 kytmanov olw(obsidian-llm-wiki-local)。把"原文 → 概念枢纽"这条路径标准化,避免概念散落、重复、遗漏。
+
+### 适用范围
+
+- 从 L2 在场素材(播客转录/会议原文)提炼概念
+- 从 L5 冷藏区淘金到主区时同步提炼
+- 用户明确说"把这篇文章/对话提炼成概念"
+
+### 5 步 SOP
+
+```
+Step 1: Ingest(收录)
+  - 原文落入对应层(L2/L3/L5),frontmatter 写齐
+  - 生成内容指纹(MD5 前 8 位)用于后续 dedup
+
+Step 2: Validate(验证)
+  - 跳过 layer=experience(L1 不萃取)
+  - 跳过 cherry_picked=true 的冷藏文件(已淘过金)
+  - 跳过被 5 次以上驳回的源(详见 Rejection Feedback)
+
+Step 3: Match(匹配)
+  - NER 抽取候选概念(8 维扫描)
+  - 对每个候选 → 在 04-Concepts/ + aliases 表里查现有节点
+  - 命中 → 走 Step 4a(增强现有节点)
+  - 未命中 → 走 Step 4b(创建新草稿或 stub)
+
+Step 4a: Draft - 增强现有节点
+  - 在已有节点的「## AI 助手补充」区块追加新观点
+  - 标注来源:`> 来源:{原文路径} ({YYYY-MM-DD})`
+  - 不动「## 相关链接(自动补充)」之外的人工撰写区
+  - confidence 不变,status 维持
+
+Step 4b: Draft - 创建新草稿/stub
+  - 信息足够 → status: draft, confidence: 0.4-0.7, 写入 04-Concepts/[前缀] 概念名.md
+  - 信息不足 → status: stub, confidence: 0.1-0.3, 写入 04-Concepts/_stubs/[stub] 概念名.md
+  - aliases 字段填入识别到的所有别名
+
+Step 5: Review(审核)
+  - 写入 _system/_log/extraction-YYYY-MM-DD.md 待审清单
+  - 用户审核后 →
+    - approve: status: draft → published, confidence → 0.8+
+    - reject: 把内容指纹追加到源文件 rejected_drafts 字段
+    - edit: 用户修改 → 走 Hand-edit Protection 流程
+```
+
+### 提炼禁忌
+
+- 不对 L1 个人经验做提炼(违反"原汁原味"原则)
+- 不在原文上修改(只在 04-Concepts/ 创建新节点)
+- 不批量自动 publish(必须人审)
+- 同一概念已有节点不重复创建(走 Step 4a 增强)
+
+---
+
+## Aliases 别名机制(v3.2 新增)
+
+> 解决问题:同一个概念有多种叫法(中英文/缩写/全称),wikilink 写哪个都该跳转到同一节点。
+
+### 工作机制
+
+1. **frontmatter aliases 字段**:每个 04-Concepts 节点声明所有别名
+   ```yaml
+   aliases: [PC, Program Counter, 程序计数器, 指令计数器]
+   ```
+
+2. **全局别名表**:`_system/_aliases.md` 维护全 vault 别名 → 主节点映射
+   - 自动生成,每次新建/更新 04-Concepts 节点时同步
+   - 格式:`| 别名 | 主节点路径 |`
+
+3. **Wikilink 自动修复**:8 维扫描时优先查别名表
+   - 用户写 `[[PC]]` → 检测到 PC 是别名 → 自动改写为 `[[[理论] 程序计数器|PC]]`(显示文本仍为 PC)
+   - 减少死链
+
+### 别名命名禁忌
+
+- 不用过于宽泛的词(如"系统"、"概念"作别名 → 容易撞车)
+- 中英文都要写(避免单语别名失效)
+- 别名 ≤ 6 个/节点(超过说明节点定义不清)
+
+### 别名冲突处理
+
+两个节点声明同一别名 → 报警到 `_system/_log/alias-conflicts.md`,用户裁决。
+
+---
+
+## Stubs 桩节点机制(v3.2 新增)
+
+> 解决问题:写笔记时引用了一个还不存在的概念,要不要立刻创建完整节点?
+
+### 桩节点定义
+
+桩节点 = **只有标题、frontmatter、最简定义的占位概念节点**。
+
+- 路径:`04-Concepts/_stubs/[stub] 概念名.md`
+- frontmatter:`status: stub, confidence: 0.1-0.3`
+- 内容:1-2 句话定义 + 出现位置反向链接
+
+### 何时创建桩节点
+
+- Wikilink 8 维扫描时强匹配但目标节点不存在 → 创建桩
+- 概念提炼管道 Step 4b 信息不足时 → 创建桩
+- 用户写笔记主动 `[[新概念]]` 链到不存在的节点 → 创建桩
+
+### 桩节点模板
+
+```markdown
+---
+tags: [stub, 主题领域]
+created: YYYY-MM-DD
+layer: extract
+status: stub
+confidence: 0.2
+aliases: []
+---
+
+# [stub] 概念名
+
+> ⚠️ 桩节点 — 待补充完整定义
+
+## 出现位置(反向链接)
+
+- [[来源文件1]]
+- [[来源文件2]]
+```
+
+### 桩节点提升规则
+
+满足任一时桩节点提升为 draft:
+
+- 反向链接数 ≥ 3
+- 用户主动来编辑此节点
+- 概念提炼管道再次命中并补充内容
+
+提升时:
+- mv 从 `_stubs/` 到 `04-Concepts/[前缀] 概念名.md`(去掉 [stub] 前缀)
+- frontmatter:`status: stub → draft, confidence: 0.2 → 0.5`
+- 通知用户审核
+
+### 桩节点禁忌
+
+- 不强制全部桩节点都要提升(有些就是低频引用,留着即可)
+- 不在桩节点上写大段内容(违反"占位"本质)
+- 不创建已存在概念的桩(走 aliases 解决重复识别)
+
+---
+
+## Rejection Feedback 反馈闭环(v3.2 新增)
+
+> 解决问题:AI 助手反复从同一来源生成被人驳回的草稿,浪费时间。
+
+### 工作机制
+
+1. **驳回记录**:用户拒绝 AI 草稿时
+   - 在源文件 frontmatter 追加 rejected_drafts 字段
+     ```yaml
+     rejected_drafts:
+       - hash: a1b2c3d4
+         date: YYYY-MM-DD
+         reason: "误识别为概念,实际是案例"
+     ```
+   - 草稿文件 mv 到 `_system/_rejected/YYYY-MM-DD-{hash}.md` 留底
+
+2. **驳回预防**:概念提炼管道 Step 2 检查
+   - 同一源 + 同一概念再次触发提炼 → 跳过
+   - 同一源累计驳回 ≥ 5 次 → 写入 `_system/_blocked.md`,后续完全跳过
+
+3. **解除阻塞**:用户主动从 `_system/_blocked.md` 移除条目 → 重新参与提炼
+
+### 反馈禁忌
+
+- 不删除 rejected_drafts(留作历史)
+- 不自动从 _blocked.md 解除(必须人工操作)
+- 不让 reject 次数超过 5 次还继续尝试(浪费 token)
+
+---
+
+## Hand-edit Protection 人工编辑保护(v3.2 新增 · 第 7 大原则)
+
+> 灵感来自 kytmanov olw 的 hand-edit detection。AI 助手写的内容和人手写的内容必须物理隔离,人改过的地方 AI 永远不重写。
+
+### 区块标记
+
+每个 AI 助手维护的节点必须用区块标记区分:
+
+```markdown
+# [理论] 概念名
+
+> 一句话定义(人工撰写区,AI 不动)
+
+## 核心要点(人工撰写区,AI 不动)
+
+(用户手写内容)
+
+## AI 助手补充
+
+> AI 自动维护,人工修改后 AI 不会覆盖
+
+(AI 增量追加内容,标注每段来源)
+
+## 相关链接(自动补充)
+
+> AI 自动维护,人工修改后 AI 不会覆盖
+
+(8 维扫描自动维护)
+```
+
+### 检测机制
+
+1. **AI 写入前必查标记**:在「## AI 助手补充」或「## 相关链接(自动补充)」区块下方写入
+2. **人工编辑标记**:用户在 AI 区块内手动改动 → 在 frontmatter 加 `ai_managed: false`,后续 AI 跳过该节点
+3. **区块外永不写**:AI 助手永远不写「核心要点」「## XXX(人工撰写区)」等区块
+
+### Hand-edit 禁忌
+
+- 不在没有标记的区块写入(默认所有未标记区块都是人工区)
+- 不删除 `ai_managed: false` 标记(只能用户自己改回 true)
+- 不混合 AI 与人工内容(物理隔离原则)
+
+---
+
 ## 回写流程(outputs → wiki)
 
 ### 触发条件
@@ -585,6 +829,9 @@ AI 助手回复满足任一时主动回写:
 8. **不创建无前缀的 04-Concepts 节点**
 9. **不在 `02-Areas/个人经验/` 用 SOP 化格式写**(v3 新增)——L1 必须保留原汁原味,SOP 萃取后走 05-Playbooks
 10. **frontmatter 必须含 layer 字段**(v3 新增)——分层是 v3 的核心,缺失视为不合规
+11. **不在「人工撰写区」写入 AI 内容**(v3.2 新增)——遵循 Hand-edit Protection 第 7 大原则,AI 只在「## AI 助手补充」「## 相关链接(自动补充)」标记区块写
+12. **不批量自动 publish 概念草稿**(v3.2 新增)——所有 status: draft → published 必须人审,违反视为污染概念枢纽
+13. **不对同一源反复尝试已被驳回 5 次以上的提炼**(v3.2 新增)——必须先经用户从 `_system/_blocked.md` 解除阻塞
 
 ---
 
@@ -612,6 +859,7 @@ MIT
 
 ## Changelog
 
+- **v3.2**(2026-05-10): 融合 kytmanov olw(obsidian-llm-wiki-local)思想——新增概念提炼管道 5 步 SOP(Ingest→Validate→Match→Draft→Review)、Aliases 别名机制(frontmatter aliases 字段 + `_system/_aliases.md` 全局表)、Stubs 桩节点机制(`_stubs/` 目录 + `[stub]` 前缀 + 提升规则)、Rejection Feedback 反馈闭环(rejected_drafts 字段 + 5 次驳回阻塞)、Hand-edit Protection 第 7 大原则(AI 区块标记 + 人工编辑检测)、frontmatter 新增 status/confidence/aliases/rejected_drafts 字段、禁止事项 +3 条
 - **v3.1**(2026-05): 新增 Wiki Link 自动识别 SOP(8 维实体扫描 + 7 步流程)、强制新建/更新文件后扫描 wikilink、新增链接形态规范、新增链接示例标准模板、新增 wikilink 禁止事项 5 条
 - **v3.0**(2026-05): 引入 4+1 层信息分层模型(余一框架 + 冷藏扩展)、新增 L1 个人经验层及三个子目录、新增高频场景路由表(12 场景)、frontmatter 强制 layer 字段、新增独立 PHILOSOPHY.md 思想文档
 - **v2.0**(2026-05): 新增 99-冷藏区隔离机制 + 命名前缀规范 + 淘金 SOP + Grep 默认豁免规则

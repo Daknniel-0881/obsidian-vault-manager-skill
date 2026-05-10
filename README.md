@@ -3,7 +3,7 @@
 > **AI 上下文越大,越要源头分流。**
 >
 > 一套完整的 Obsidian 知识库管理方法论 + 一个 [Claude Code](https://www.anthropic.com/claude-code) Skill 实现。
-> 用 **4+1 层信息分层 + PARA + P.A.I.R + 冷藏区隔离 + 命名前缀规范 + 高频场景路由 + Wiki Link 自动识别** 七套机制,让上千文件的 Obsidian 知识库保持高信噪比,**让 AI 时代最稀缺的"个人经验"不被 SOP 流程稀释**。
+> 用 **4+1 层信息分层 + PARA + P.A.I.R + 冷藏区隔离 + 命名前缀规范 + 高频场景路由 + Wiki Link 自动识别 + 概念提炼管道 + 别名/桩链修复 + 人工编辑保护** 十套机制,让上千文件的 Obsidian 知识库保持高信噪比,**让 AI 时代最稀缺的"个人经验"不被 SOP 流程稀释**。
 
 ---
 
@@ -37,7 +37,7 @@
 - 检索时大量噪声进入上下文,让 AI 助手回答质量下降
 - **(v3 新发现)个人原话/亲历/感受被 SOP 萃取流程"磨平",失去 AI 时代最稀缺的"你"**
 
-### 七大解决机制
+### 十大解决机制
 
 | 机制 | 解决什么 |
 |------|---------|
@@ -48,6 +48,9 @@
 | **5. 命名前缀规范** | `[MOC]` / `[理论]` / `[工程]` / `[方法论]` 让概念节点一眼分类 |
 | **6. 高频场景路由表(v3)** | 12 个高频场景 → 对应目录,AI 助手按表自动路由 |
 | **7. Wiki Link 自动识别(v3.1)** | 新建/更新文件后 8 维实体扫描 + 7 步建立链接,告别死链失修 |
+| **8. 概念提炼管道(v3.2)** | 5 步 SOP(Ingest→Validate→Match→Draft→Review),把"原文 → 概念枢纽"标准化,告别概念散落 |
+| **9. 别名 + 桩节点机制(v3.2)** | aliases 字段消除同义概念多节点,_stubs/ 占位节点防死链,wikilink 自动修复 |
+| **10. 人工编辑保护(v3.2)** | AI 区块标记 + Hand-edit 检测,人改过的地方 AI 永不重写 |
 
 ---
 
@@ -62,7 +65,7 @@
 > 真正稀缺的不是上下文长度,是上下文质量。
 > 把不同加工程度的信息物理隔离,不让低密度原料淹没你的一手感受。
 
-### 四个思想来源
+### 五个思想来源
 
 | 来源 | 提出者 | 解决什么 | 我们怎么用 |
 |------|-------|---------|-----------|
@@ -70,6 +73,7 @@
 | **P.A.I.R** | flomo / 少楠 | 收录顺畅度 | `00-Inbox/` 缓冲机制 |
 | **LLM Wiki** | Andrej Karpathy(2026 公开分享) | AI 时代复利 | `04-Concepts/` 概念枢纽 + AI 维护 |
 | **4 层信息分层** | 余一(2026-05 公开分享) | 信息源头污染 | 引出 4+1 层模型 |
+| **olw 概念提炼管道** | kytmanov(obsidian-llm-wiki-local) | 把"原文 → 概念"工程化 | 5 步提炼 SOP + Aliases + Stubs + Rejection + Hand-edit Protection(v3.2) |
 
 ### 4+1 层信息分层模型(v3 核心)
 
@@ -216,7 +220,7 @@ Skill 在以下任一情况自动加载:
 - 从冷藏区淘金提炼
 - 记录"个人经验"(原话/亲历/感受/判断)→ 走 L1 流程
 
-### 4.2 6 大工作流
+### 4.2 7 大工作流
 
 ```
 1. 收录流程   → 类型判断 → 选目录 → frontmatter → 创建笔记 → 8 维 wikilink 扫描 → 更新 MOC
@@ -225,6 +229,7 @@ Skill 在以下任一情况自动加载:
 4. 回写流程   → 综合性分析 → 判断归属 → 创建/追加 → 标注来源 → 补 Wiki Link
 5. 整理流程   → Inbox 周清理 + 冷藏季度淘金 + Archive 持续提炼
 6. Wikilink 自动识别(v3.1)→ NER 提取 → vault 内 Glob/Grep → 命中分级 → 追加 [[]] → 反向链接 → MOC 同步 → 质量验证
+7. 概念提炼管道(v3.2)→ Ingest → Validate(过滤 L1 / 已淘金 / 被驳回 5 次)→ Match(查 aliases 表)→ Draft(增强或 stub)→ Review(人审 approve/reject/edit)
 ```
 
 ### 4.3 6 条核心原则
@@ -236,7 +241,7 @@ Skill 在以下任一情况自动加载:
 5. **复利优先**:每次入库都问"能不能复用?"能 → 同步写入 Playbooks/Concepts
 6. **冷藏不删除**:冷藏区是隔离不是丢弃,高价值发现复制到主区,源文件加 `cherry_picked: true`
 
-### 4.4 10 条禁止事项
+### 4.4 13 条禁止事项
 
 1. 不删除任何文件(除非用户明确要求)
 2. 不修改原文内容(只追加,原文一字不改)
@@ -248,6 +253,9 @@ Skill 在以下任一情况自动加载:
 8. 不创建无前缀的 04-Concepts 节点
 9. **不在 `02-Areas/个人经验/` 用 SOP 化格式写**(v3) — L1 必须保留原汁原味
 10. **frontmatter 必须含 layer 字段**(v3) — 缺失视为不合规
+11. **不在「人工撰写区」写入 AI 内容**(v3.2) — Hand-edit Protection 第 7 大原则
+12. **不批量自动 publish 概念草稿**(v3.2) — 所有 status: draft → published 必须人审
+13. **不对同一源反复尝试已被驳回 5 次以上的提炼**(v3.2) — 必须先经人工解除阻塞
 
 ### 4.5 自动化脚本写入路径
 
@@ -461,9 +469,9 @@ review_date: YYYY-MM-DD          # 下次复习时间
 
 | 文件 | 作用 |
 |------|------|
-| [SKILL.md](./SKILL.md) | 操作规范主体(怎么做)— v3.1 |
-| [PHILOSOPHY.md](./PHILOSOPHY.md) | 设计思想文档(为什么)— v3 |
-| [README.md](./README.md) | 本文件 — v3.1 |
+| [SKILL.md](./SKILL.md) | 操作规范主体(怎么做)— v3.2 |
+| [PHILOSOPHY.md](./PHILOSOPHY.md) | 设计思想文档(为什么)— v3.2 |
+| [README.md](./README.md) | 本文件 — v3.2 |
 | [LICENSE](./LICENSE) | MIT 许可证 |
 
 ---
@@ -476,6 +484,7 @@ review_date: YYYY-MM-DD          # 下次复习时间
 - **P.A.I.R 方法论**:少楠 / flomo
 - **LLM Wiki**:Andrej Karpathy(2026 公开分享)
 - **4 层信息分层**:余一(2026-05 公开分享)
+- **olw 概念提炼管道 + 别名/桩节点/驳回反馈/人工编辑保护**(v3.2 融合):kytmanov [obsidian-llm-wiki-local](https://github.com/kytmanov/obsidian-llm-wiki-local)
 - **Claude Code Skill 系统**:Anthropic
 
 ### License
@@ -486,6 +495,7 @@ MIT
 
 ## 十、Changelog
 
+- **v3.2**(2026-05-10): 融合 kytmanov olw 思想——新增概念提炼管道 5 步 SOP(Ingest→Validate→Match→Draft→Review)、Aliases 别名机制、Stubs 桩节点机制、Rejection Feedback 反馈闭环、Hand-edit Protection 第 7 大原则、frontmatter 新增 status/confidence/aliases/rejected_drafts 字段、禁止事项 +3 条、致谢追加 kytmanov
 - **v3.1**(2026-05-09): 新增 Wiki Link 自动识别 SOP(8 维实体扫描 + 7 步流程)、强制新建/更新文件后扫描 wikilink、新增链接形态规范、新增链接示例标准模板、新增 wikilink 禁止事项 5 条、README 重写为完整方法论 + 改造指南
 - **v3.0**(2026-05-08): 引入 4+1 层信息分层模型(余一框架 + 冷藏扩展)、新增 L1 个人经验层及 3 个子目录、新增高频场景路由表(12 场景)、frontmatter 强制 layer 字段、新增独立 PHILOSOPHY.md 思想文档
 - **v2.0**(2026-05): 新增 99-冷藏区隔离机制 + 命名前缀规范 + 淘金 SOP + Grep 默认豁免规则
@@ -493,7 +503,7 @@ MIT
 
 ---
 
-> **物理隔离 + 命名规范 + 信噪比治理 + Wiki Link 自动识别 = 让 AI 时代的知识库不腐烂。**
+> **物理隔离 + 命名规范 + 信噪比治理 + Wiki Link 自动识别 + 概念提炼管道 + 人工编辑保护 = 让 AI 时代的知识库不腐烂。**
 >
 > 详细思想见 [PHILOSOPHY.md](./PHILOSOPHY.md)。
 
